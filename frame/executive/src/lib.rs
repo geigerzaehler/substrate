@@ -130,7 +130,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
 use codec::{Codec, Encode};
-use frame_system::{extrinsics_root, DigestOf};
+use frame_system::{extrinsics_root, DigestOf, RuntimePurpose};
 
 /// Trait that can be used to execute a block.
 pub trait ExecuteBlock<Block: BlockT> {
@@ -206,13 +206,14 @@ where
 	UnsignedValidator: ValidateUnsigned<Call=CallOf<Block::Extrinsic, Context>>,
 {
 	/// Start the execution of a particular block.
-	pub fn initialize_block(header: &System::Header) {
+	pub fn initialize_block(header: &System::Header, purpose: RuntimePurpose) {
 		let digests = Self::extract_pre_digest(&header);
 		Self::initialize_block_impl(
 			header.number(),
 			header.parent_hash(),
 			header.extrinsics_root(),
-			&digests
+			&digests,
+			purpose,
 		);
 	}
 
@@ -231,6 +232,7 @@ where
 		parent_hash: &System::Hash,
 		extrinsics_root: &System::Hash,
 		digest: &Digest<System::Hash>,
+		purpose: RuntimePurpose,
 	) {
 		if Self::runtime_upgraded() {
 			// System is not part of `AllModules`, so we need to call this manually.
@@ -245,6 +247,7 @@ where
 			extrinsics_root,
 			digest,
 			frame_system::InitKind::Full,
+			purpose,
 		);
 		<frame_system::Module<System> as OnInitialize<System::BlockNumber>>::on_initialize(*block_number);
 		let weight = <AllModules as OnInitialize<System::BlockNumber>>::on_initialize(*block_number)
@@ -288,7 +291,7 @@ where
 
 	/// Actually execute all transitions for `block`.
 	pub fn execute_block(block: Block) {
-		Self::initialize_block(block.header());
+		Self::initialize_block(block.header(), RuntimePurpose::ImportBlock);
 
 		// any initial checks
 		Self::initial_checks(&block);
@@ -433,6 +436,7 @@ where
 			header.extrinsics_root(),
 			&digests,
 			frame_system::InitKind::Inspection,
+			frame_system::RuntimePurpose::ReadState,
 		);
 
 		// Initialize logger, so the log messages are visible
@@ -680,13 +684,16 @@ mod tests {
 			= <Runtime as pallet_transaction_payment::Trait>::WeightToFee::calc(&weight);
 		let mut t = sp_io::TestExternalities::new(t);
 		t.execute_with(|| {
-			Executive::initialize_block(&Header::new(
-				1,
-				H256::default(),
-				H256::default(),
-				[69u8; 32].into(),
-				Digest::default(),
-			));
+			Executive::initialize_block(
+				&Header::new(
+					1,
+					H256::default(),
+					H256::default(),
+					[69u8; 32].into(),
+					Digest::default(),
+				),
+				frame_system::RuntimePurpose::BuildBlock,
+			);
 			let r = Executive::apply_extrinsic(xt);
 			assert!(r.is_ok());
 			assert_eq!(<pallet_balances::Module<Runtime>>::total_balance(&1), 142 - fee);
@@ -758,13 +765,16 @@ mod tests {
 		// bad nonce check!
 		let xt = TestXt::new(Call::Balances(BalancesCall::transfer(33, 69)), sign_extra(1, 30, 0));
 		t.execute_with(|| {
-			Executive::initialize_block(&Header::new(
-				1,
-				H256::default(),
-				H256::default(),
-				[69u8; 32].into(),
-				Digest::default(),
-			));
+			Executive::initialize_block(
+				&Header::new(
+					1,
+					H256::default(),
+					H256::default(),
+					[69u8; 32].into(),
+					Digest::default(),
+				),
+				frame_system::RuntimePurpose::BuildBlock,
+			);
 			assert!(Executive::apply_extrinsic(xt).is_err());
 			assert_eq!(<frame_system::Module<Runtime>>::extrinsic_index(), Some(0));
 		});
@@ -782,13 +792,16 @@ mod tests {
 		let limit = AvailableBlockRatio::get() * MaximumBlockWeight::get() - base_block_weight;
 		let num_to_exhaust_block = limit / (encoded_len + 5);
 		t.execute_with(|| {
-			Executive::initialize_block(&Header::new(
-				1,
-				H256::default(),
-				H256::default(),
-				[69u8; 32].into(),
-				Digest::default(),
-			));
+			Executive::initialize_block(
+				&Header::new(
+					1,
+					H256::default(),
+					H256::default(),
+					[69u8; 32].into(),
+					Digest::default(),
+				),
+				frame_system::RuntimePurpose::BuildBlock,
+			);
 			// Base block execution weight + `on_initialize` weight from the custom module.
 			assert_eq!(<frame_system::Module<Runtime>>::block_weight().total(), base_block_weight);
 
@@ -823,13 +836,16 @@ mod tests {
 			// Block execution weight + on_initialize weight from custom module
 			let base_block_weight = 175 + <Runtime as frame_system::Trait>::BlockExecutionWeight::get();
 
-			Executive::initialize_block(&Header::new(
-				1,
-				H256::default(),
-				H256::default(),
-				[69u8; 32].into(),
-				Digest::default(),
-			));
+			Executive::initialize_block(
+				&Header::new(
+					1,
+					H256::default(),
+					H256::default(),
+					[69u8; 32].into(),
+					Digest::default(),
+				),
+				frame_system::RuntimePurpose::BuildBlock,
+			);
 
 			assert_eq!(<frame_system::Module<Runtime>>::block_weight().total(), base_block_weight);
 			assert_eq!(<frame_system::Module<Runtime>>::all_extrinsics_len(), 0);
@@ -851,13 +867,16 @@ mod tests {
 			assert_eq!(<frame_system::Module<Runtime>>::all_extrinsics_len(), 0);
 
 			// New Block
-			Executive::initialize_block(&Header::new(
-				2,
-				H256::default(),
-				H256::default(),
-				[69u8; 32].into(),
-				Digest::default(),
-			));
+			Executive::initialize_block(
+				&Header::new(
+					2,
+					H256::default(),
+					H256::default(),
+					[69u8; 32].into(),
+					Digest::default(),
+				),
+				frame_system::RuntimePurpose::BuildBlock,
+			);
 
 			// Block weight cleaned up on `System::initialize`
 			assert_eq!(<frame_system::Module<Runtime>>::block_weight().total(), base_block_weight);
@@ -898,13 +917,16 @@ mod tests {
 					+ <Runtime as frame_system::Trait>::ExtrinsicBaseWeight::get();
 				let fee: Balance =
 					<Runtime as pallet_transaction_payment::Trait>::WeightToFee::calc(&weight);
-				Executive::initialize_block(&Header::new(
-					1,
-					H256::default(),
-					H256::default(),
-					[69u8; 32].into(),
-					Digest::default(),
-				));
+				Executive::initialize_block(
+					&Header::new(
+						1,
+						H256::default(),
+						H256::default(),
+						[69u8; 32].into(),
+						Digest::default(),
+					),
+					frame_system::RuntimePurpose::BuildBlock,
+				);
 
 				if lock == WithdrawReasons::except(WithdrawReason::TransactionPayment) {
 					assert!(Executive::apply_extrinsic(xt).unwrap().is_ok());
@@ -928,7 +950,10 @@ mod tests {
 	fn block_hooks_weight_is_stored() {
 		new_test_ext(1).execute_with(|| {
 
-			Executive::initialize_block(&Header::new_from_number(1));
+			Executive::initialize_block(
+				&Header::new_from_number(1),
+				frame_system::RuntimePurpose::BuildBlock,
+			);
 			// NOTE: might need updates over time if new weights are introduced.
 			// For now it only accounts for the base block execution weight and
 			// the `on_initialize` weight defined in the custom test module.
@@ -1017,13 +1042,16 @@ mod tests {
 				..Default::default()
 			});
 
-			Executive::initialize_block(&Header::new(
-				1,
-				H256::default(),
-				H256::default(),
-				[69u8; 32].into(),
-				Digest::default(),
-			));
+			Executive::initialize_block(
+				&Header::new(
+					1,
+					H256::default(),
+					H256::default(),
+					[69u8; 32].into(),
+					Digest::default(),
+				),
+				frame_system::RuntimePurpose::BuildBlock,
+			);
 
 			assert_eq!(&sp_io::storage::get(TEST_KEY).unwrap()[..], *b"module");
 			assert_eq!(sp_io::storage::get(CUSTOM_ON_RUNTIME_KEY).unwrap(), true.encode());

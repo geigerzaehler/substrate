@@ -61,7 +61,7 @@ use sp_blockchain::{
 use sp_trie::StorageProof;
 use sp_api::{
 	CallApiAt, ConstructRuntimeApi, Core as CoreApi, ApiExt, ApiRef, ProvideRuntimeApi,
-	CallApiAtParams,
+	CallApiAtParams, CallReason,
 };
 use sc_block_builder::{BlockBuilderApi, BlockBuilderProvider};
 use sc_client_api::{
@@ -1638,7 +1638,11 @@ impl<B, E, Block, RA> CallApiAt<Block> for Client<B, E, Block, RA> where
 		);
 
 		self.executor.contextual_call::<_, fn(_,_) -> _,_,_>(
-			|| core_api.initialize_block(at, &self.prepare_environment_block(at)?),
+			|| core_api.initialize_block(
+				at,
+				&self.prepare_environment_block(at)?,
+				CallReason::ReadState,
+			),
 			at,
 			params.function,
 			&params.arguments,

@@ -34,7 +34,9 @@ use sp_runtime::{
 };
 use sp_blockchain::{ApplyExtrinsicFailed, Error};
 use sp_core::ExecutionContext;
-use sp_api::{Core, ApiExt, ApiErrorFor, ApiRef, ProvideRuntimeApi, StorageChanges, StorageProof};
+use sp_api::{
+	Core, ApiExt, ApiErrorFor, ApiRef, ProvideRuntimeApi, StorageChanges, StorageProof, CallReason,
+};
 use sp_consensus::RecordProof;
 
 pub use sp_block_builder::BlockBuilder as BlockBuilderApi;
@@ -137,7 +139,7 @@ where
 		let block_id = BlockId::Hash(parent_hash);
 
 		api.initialize_block_with_context(
-			&block_id, ExecutionContext::BlockConstruction, &header,
+			&block_id, ExecutionContext::BlockConstruction, &header, CallReason::BuildBlock,
 		)?;
 
 		Ok(Self {

@@ -568,24 +568,43 @@ impl From<RuntimeVersion> for OldRuntimeVersion {
 	}
 }
 
+/// The reason for calling into the runtime.
+#[derive(Encode, Decode, PartialEq, sp_core::RuntimeDebug)]
+pub enum CallReason {
+	/// For reading state from the node.
+	///
+	/// This is the default reason used when calling any runtime
+	/// api function.
+	ReadState,
+	/// For building a block.
+	BuildBlock,
+}
+
 decl_runtime_apis! {
 	/// The `Core` runtime api that every Substrate runtime needs to implement.
 	#[core_trait]
-	#[api_version(3)]
+	#[api_version(4)]
 	pub trait Core {
 		/// Returns the version of the runtime.
 		fn version() -> RuntimeVersion;
+
 		/// Returns the version of the runtime.
 		#[changed_in(3)]
 		fn version() -> OldRuntimeVersion;
+
 		/// Execute the given block.
 		#[skip_initialize_block]
 		fn execute_block(block: Block);
+
 		/// Initialize a block with the given header.
-		#[renamed("initialise_block", 2)]
 		#[skip_initialize_block]
+		#[changed_in(4)]
 		#[initialize_block]
 		fn initialize_block(header: &<Block as BlockT>::Header);
+
+		/// Initialize a block with the given header.
+		#[skip_initialize_block]
+		fn initialize_block(header: &<Block as BlockT>::Header, reason: CallReason);
 	}
 
 	/// The `Metadata` api trait that returns metadata for the runtime.

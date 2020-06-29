@@ -587,7 +587,8 @@ mod tests {
 				&hash,
 				&Default::default(),
 				&Default::default(),
-				Default::default()
+				Default::default(),
+				frame_system::RuntimePurpose::BuildBlock,
 			);
 
 			for number in 1..8 {
@@ -688,6 +689,7 @@ mod tests {
 				&Default::default(),
 				header.digest(),
 				Default::default(),
+				frame_system::RuntimePurpose::BuildBlock,
 			);
 
 			assert_eq!(Authorship::author(), author);

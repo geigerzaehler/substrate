@@ -438,6 +438,7 @@ pub fn start_session(session_index: SessionIndex) {
 			&Default::default(),
 			&Default::default(),
 			Default::default(),
+			frame_system::RuntimePurpose::BuildBlock,
 		);
 
 		Session::on_initialize(System::block_number());
@@ -459,6 +460,7 @@ pub fn initialize_block(number: u64, parent_hash: H256) {
 		&Default::default(),
 		&Default::default(),
 		Default::default(),
+		frame_system::RuntimePurpose::BuildBlock,
 	);
 }
 

@@ -311,7 +311,8 @@ mod tests {
 					&parent_hash,
 					&Default::default(),
 					&Default::default(),
-					Default::default()
+					Default::default(),
+					frame_system::RuntimePurpose::BuildBlock,
 				);
 				FinalityTracker::on_finalize(i);
 				let hdr = System::finalize();
@@ -337,6 +338,7 @@ mod tests {
 					&Default::default(),
 					&Default::default(),
 					Default::default(),
+					frame_system::RuntimePurpose::BuildBlock,
 				);
 				assert_ok!(FinalityTracker::final_hint(Origin::none(), i - 1));
 				FinalityTracker::on_finalize(i);

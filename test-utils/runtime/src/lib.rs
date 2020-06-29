@@ -519,7 +519,10 @@ cfg_if! {
 					system::execute_block(block)
 				}
 
-				fn initialize_block(header: &<Block as BlockT>::Header) {
+				fn initialize_block(
+					header: &<Block as BlockT>::Header,
+					_: sp_api::CallReason,
+				) {
 					system::initialize_block(header)
 				}
 			}
@@ -741,7 +744,10 @@ cfg_if! {
 					system::execute_block(block)
 				}
 
-				fn initialize_block(header: &<Block as BlockT>::Header) {
+				fn initialize_block(
+					header: &<Block as BlockT>::Header,
+					reason: sp_api::CallReason,
+				) {
 					system::initialize_block(header)
 				}
 			}

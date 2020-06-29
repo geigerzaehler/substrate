@@ -144,7 +144,7 @@ fn implement_common_api_traits(
 				&self,
 				_: &#crate_::BlockId<#block_type>,
 				_: #crate_::ExecutionContext,
-				_: Option<&<#block_type as #crate_::BlockT>::Header>,
+				_: Option<(&<#block_type as #crate_::BlockT>::Header, #crate_::CallReason)>,
 				_: Vec<u8>,
 			) -> std::result::Result<#crate_::NativeOrEncoded<()>, #error_type> {
 				unimplemented!("Not required for testing!")

@@ -127,7 +127,14 @@ pub fn new_test_ext(authorities_len: usize) -> (Vec<AuthorityPair>, sp_io::TestE
 
 pub fn go_to_block(n: u64, s: u64) {
 	let pre_digest = make_secondary_plain_pre_digest(0, s);
-	System::initialize(&n, &Default::default(), &Default::default(), &pre_digest, InitKind::Full);
+	System::initialize(
+		&n,
+		&Default::default(),
+		&Default::default(),
+		&pre_digest,
+		InitKind::Full,
+		frame_system::RuntimePurpose::BuildBlock,
+	);
 	System::set_block_number(n);
 	if s > 1 {
 		CurrentSlot::put(s);

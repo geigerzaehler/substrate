@@ -148,6 +148,26 @@ pub use extensions::{
 // Backward compatible re-export.
 pub use extensions::check_mortality::CheckMortality as CheckEra;
 
+/// The purpose why the current runtime instance exists.
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum RuntimePurpose {
+	/// For reading the state.
+	ReadState,
+	/// For building a block.
+	BuildBlock,
+	/// For importing a block.
+	ImportBlock,
+}
+
+impl From<sp_api::CallReason> for RuntimePurpose {
+	fn from(reason: sp_api::CallReason) -> Self {
+		match reason {
+			sp_api::CallReason::ReadState => Self::ReadState,
+			sp_api::CallReason::BuildBlock => Self::BuildBlock,
+		}
+	}
+}
+
 /// Compute the trie root of a list of extrinsics.
 pub fn extrinsics_root<H: Hash, E: codec::Encode>(extrinsics: &[E]) -> H::Output {
 	extrinsics_data_root::<H>(extrinsics.iter().map(codec::Encode::encode).collect())
@@ -445,6 +465,11 @@ decl_storage! {
 
 		/// The execution phase of the block.
 		ExecutionPhase: Option<Phase>;
+
+		/// The purpose of the current runtime instance.
+		///
+		/// This will be set in `on_initialize` and will be removed by `on_finalize`.
+		pub RuntimeInstancePurpose get(fn runtime_instance_purpose): Option<RuntimePurpose>;
 	}
 	add_extra_genesis {
 		config(changes_trie_config): Option<ChangesTrieConfiguration>;
@@ -984,6 +1009,7 @@ impl<T: Trait> Module<T> {
 		txs_root: &T::Hash,
 		digest: &DigestOf<T>,
 		kind: InitKind,
+		purpose: RuntimePurpose,
 	) {
 		// populate environment
 		ExecutionPhase::put(Phase::Initialization);
@@ -1003,10 +1029,13 @@ impl<T: Trait> Module<T> {
 			EventCount::kill();
 			<EventTopics<T>>::remove_all();
 		}
+
+		RuntimeInstancePurpose::put(purpose);
 	}
 
 	/// Remove temporary "environment" entries in storage.
 	pub fn finalize() -> T::Header {
+		RuntimeInstancePurpose::kill();
 		ExecutionPhase::kill();
 		ExtrinsicCount::kill();
 		AllExtrinsicsLen::kill();

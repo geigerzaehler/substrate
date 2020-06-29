@@ -1528,6 +1528,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "serde",
+ "sp-api",
  "sp-core",
  "sp-externalities",
  "sp-io",

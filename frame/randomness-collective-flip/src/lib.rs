@@ -209,6 +209,7 @@ mod tests {
 				&Default::default(),
 				&Default::default(),
 				frame_system::InitKind::Full,
+				frame_system::RuntimePurpose::BuildBlock,
 			);
 			CollectiveFlip::on_initialize(i);
 

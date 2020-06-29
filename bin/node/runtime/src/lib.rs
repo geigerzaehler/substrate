@@ -882,8 +882,8 @@ impl_runtime_apis! {
 			Executive::execute_block(block)
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
-			Executive::initialize_block(header)
+		fn initialize_block(header: &<Block as BlockT>::Header, call_reason: sp_api::CallReason) {
+			Executive::initialize_block(header, call_reason.into())
 		}
 	}
 

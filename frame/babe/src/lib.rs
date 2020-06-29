@@ -28,13 +28,11 @@ use frame_support::{
 	decl_storage, decl_module, traits::{FindAuthor, Get, Randomness as RandomnessT},
 	weights::Weight,
 };
+use frame_system::RuntimePurpose;
 use sp_timestamp::OnTimestampSet;
 use sp_runtime::{generic::DigestItem, ConsensusEngineId, Perbill};
 use sp_runtime::traits::{IsMember, SaturatedConversion, Saturating, Hash, One};
-use sp_staking::{
-	SessionIndex,
-	offence::{Offence, Kind},
-};
+use sp_staking::{SessionIndex, offence::{Offence, Kind}};
 use sp_application_crypto::Public;
 
 use codec::{Encode, Decode};
@@ -470,7 +468,7 @@ impl<T: Trait> Module<T> {
 			})
 			.next();
 
-		let maybe_randomness: Option<schnorrkel::Randomness> = maybe_pre_digest.and_then(|digest| {
+		let maybe_randomness: Option<schnorrkel::Randomness> = if let Some(digest) = maybe_pre_digest {
 			// on the first non-zero block (i.e. block #1)
 			// this is where the first epoch (epoch #0) actually starts.
 			// we need to adjust internal storage accordingly.
@@ -528,7 +526,18 @@ impl<T: Trait> Module<T> {
 			} else {
 				None
 			}
-		});
+		} else if let Some(RuntimePurpose::ReadState) = frame_system::Module::<T>::runtime_instance_purpose() {
+			// If the runtime is only initialized for reading state, we need to increase the slot
+			// number by one to match it with the expected slot number.
+			// This is for example important to calculate the correct `should_end_session()`
+			CurrentSlot::mutate(|slot| {
+				*slot += 1;
+			});
+
+			None
+		} else {
+			None
+		};
 
 		Initialized::put(maybe_randomness);
 
